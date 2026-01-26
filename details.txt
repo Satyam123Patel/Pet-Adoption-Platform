@@ -1,0 +1,5 @@
+many things now working
+but when in admin page i do refresh there admin part vanishs its ui and admin reddirected to the main frontend page
+.)also need to check that user can edit its name there in website or not
+.)may be in ui need to improve this that in the front page itself any particualr user or admin can login by selecting his role?
+
