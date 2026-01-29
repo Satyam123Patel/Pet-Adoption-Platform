@@ -317,6 +317,11 @@ SHOW TRIGGERS;
 SHOW PROCEDURE STATUS
 WHERE Db = 'pet_adoption_and_tracking_management_system';
 
+UPDATE pet
+SET category = 'rabbit',
+    breed = 'Cottontail'
+WHERE id = 6;
+
 -- ========================================
 -- 6. VERIFICATION
 -- ========================================
