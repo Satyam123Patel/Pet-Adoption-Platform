@@ -1,4 +1,18 @@
-//1
+// //1
+// package com.petadoption.repository;
+
+// import com.petadoption.entity.User;
+// import org.springframework.data.jpa.repository.JpaRepository;
+// import org.springframework.stereotype.Repository;
+
+// import java.util.Optional;
+
+// @Repository
+// public interface UserRepository extends JpaRepository<User, Long> {
+//     // Change this from User to Optional<User>
+//     Optional<User> findByEmail(String email);
+// }
+
 package com.petadoption.repository;
 
 import com.petadoption.entity.User;
