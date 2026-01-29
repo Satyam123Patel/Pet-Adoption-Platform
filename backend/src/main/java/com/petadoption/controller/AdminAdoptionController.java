@@ -1,19 +1,16 @@
-//1
+// //1.1
 // package com.petadoption.controller;
 
 // import com.petadoption.entity.AdoptionRequest;
-// import com.petadoption.entity.Pet;
 // import com.petadoption.repository.AdoptionRequestRepository;
-// import com.petadoption.repository.PetRepository;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.http.ResponseEntity;
+// import org.springframework.jdbc.core.JdbcTemplate;
 // import org.springframework.transaction.annotation.Transactional;
 // import org.springframework.web.bind.annotation.*;
 
 // import java.time.LocalDateTime;
-// import java.util.HashMap;
-// import java.util.List;
-// import java.util.Map;
+// import java.util.*;
 
 // @RestController
 // @RequestMapping("/api/admin/adoptions")
@@ -24,30 +21,50 @@
 //     private AdoptionRequestRepository adoptionRequestRepository;
 
 //     @Autowired
-//     private PetRepository petRepository;
+//     private JdbcTemplate jdbcTemplate;
 
-//     // Get all pending adoption requests
 //     @GetMapping("/pending")
-//     public ResponseEntity<List<AdoptionRequest>> getPendingRequests() {
-//         List<AdoptionRequest> requests = adoptionRequestRepository.findByStatus("PENDING");
-//         return ResponseEntity.ok(requests);
+//     public ResponseEntity<?> getPendingRequests() {
+//         try {
+//             String sql = """
+//                     SELECT
+//                         ar.id AS request_id,
+//                         ar.user_id,
+//                         ar.pet_id,
+//                         ar.living_situation,
+//                         ar.previous_experience,
+//                         ar.family_composition,
+//                         ar.status,
+//                         ar.created_at,
+
+//                         u.name AS user_name,
+//                         u.email AS user_email,
+
+//                         p.name AS pet_name,
+//                         p.breed AS pet_breed,
+//                         p.age AS pet_age,
+//                         p.category AS pet_category,
+//                         p.image_url AS pet_image
+
+//                     FROM adoption_requests ar
+//                     INNER JOIN users u ON ar.user_id = u.id
+//                     INNER JOIN pet p ON ar.pet_id = p.id
+//                     WHERE ar.status = 'PENDING'
+//                     ORDER BY ar.created_at DESC
+//                     """;
+
+//             List<Map<String, Object>> requests = jdbcTemplate.queryForList(sql);
+//             System.out.println("✅ Found " + requests.size() + " pending requests");
+
+//             return ResponseEntity.ok(requests);
+
+//         } catch (Exception e) {
+//             System.err.println("❌ Error: " + e.getMessage());
+//             return ResponseEntity.badRequest()
+//                     .body(Map.of("error", e.getMessage()));
+//         }
 //     }
 
-//     // Get all approved adoption requests
-//     @GetMapping("/approved")
-//     public ResponseEntity<List<AdoptionRequest>> getApprovedRequests() {
-//         List<AdoptionRequest> requests = adoptionRequestRepository.findByStatus("APPROVED");
-//         return ResponseEntity.ok(requests);
-//     }
-
-//     // Get all adoption requests
-//     @GetMapping("/all")
-//     public ResponseEntity<List<AdoptionRequest>> getAllRequests() {
-//         List<AdoptionRequest> requests = adoptionRequestRepository.findAllByOrderByCreatedAtDesc();
-//         return ResponseEntity.ok(requests);
-//     }
-
-//     // Approve adoption request
 //     @PutMapping("/{id}/approve")
 //     @Transactional
 //     public ResponseEntity<?> approveRequest(@PathVariable Long id) {
@@ -55,26 +72,23 @@
 //             AdoptionRequest request = adoptionRequestRepository.findById(id)
 //                     .orElseThrow(() -> new RuntimeException("Request not found"));
 
-//             // Update request status
-//             request.setStatus("APPROVED");
+//             request.setStatus(AdoptionRequest.Status.APPROVED);
 //             request.setUpdatedAt(LocalDateTime.now());
 //             adoptionRequestRepository.save(request);
 
-//             // Update pet status to adopted
-//             Pet pet = petRepository.findById(request.getPetId())
-//                     .orElseThrow(() -> new RuntimeException("Pet not found"));
-//             pet.setStatus("adopted");
-//             petRepository.save(pet);
+//             String sql = "UPDATE pet SET status = 'adopted' WHERE id = ?";
+//             jdbcTemplate.update(sql, request.getPetId());
 
-//             Map<String, String> response = new HashMap<>();
-//             response.put("message", "Adoption request approved successfully");
-//             return ResponseEntity.ok(response);
+//             System.out.println("✅ Request approved");
+
+//             return ResponseEntity.ok(Map.of("message", "Approved successfully"));
+
 //         } catch (Exception e) {
-//             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+//             return ResponseEntity.badRequest()
+//                     .body(Map.of("error", e.getMessage()));
 //         }
 //     }
 
-//     // Reject adoption request
 //     @PutMapping("/{id}/reject")
 //     @Transactional
 //     public ResponseEntity<?> rejectRequest(@PathVariable Long id) {
@@ -82,43 +96,37 @@
 //             AdoptionRequest request = adoptionRequestRepository.findById(id)
 //                     .orElseThrow(() -> new RuntimeException("Request not found"));
 
-//             // DELETE the request instead of just marking as rejected
-//             adoptionRequestRepository.delete(request);
+//             request.setStatus(AdoptionRequest.Status.REJECTED);
+//             request.setUpdatedAt(LocalDateTime.now());
+//             adoptionRequestRepository.save(request);
 
-//             // Update pet status back to available
-//             Pet pet = petRepository.findById(request.getPetId())
-//                     .orElseThrow(() -> new RuntimeException("Pet not found"));
-//             pet.setStatus("available");
-//             petRepository.save(pet);
+//             String sql = "UPDATE pet SET status = 'available' WHERE id = ?";
+//             jdbcTemplate.update(sql, request.getPetId());
 
-//             Map<String, String> response = new HashMap<>();
-//             response.put("message", "Adoption request rejected and deleted");
-//             return ResponseEntity.ok(response);
+//             System.out.println("❌ Request rejected");
+
+//             return ResponseEntity.ok(Map.of("message", "Rejected"));
+
 //         } catch (Exception e) {
-//             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-//         }
-//     }
-
-//     // Delete adoption request
-//     @DeleteMapping("/{id}")
-//     public ResponseEntity<?> deleteRequest(@PathVariable Long id) {
-//         try {
-//             adoptionRequestRepository.deleteById(id);
-//             return ResponseEntity.ok(Map.of("message", "Request deleted successfully"));
-//         } catch (Exception e) {
-//             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+//             return ResponseEntity.badRequest()
+//                     .body(Map.of("error", e.getMessage()));
 //         }
 //     }
 // }
 
-//1.1
 package com.petadoption.controller;
 
 import com.petadoption.entity.AdoptionRequest;
+import com.petadoption.entity.User;
+import com.petadoption.entity.Pet;
 import com.petadoption.repository.AdoptionRequestRepository;
+import com.petadoption.repository.UserRepository;
+import com.petadoption.repository.PetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -134,7 +142,16 @@ public class AdminAdoptionController {
     private AdoptionRequestRepository adoptionRequestRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PetRepository petRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JavaMailSender mailSender; // ✅ Email sender
 
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingRequests() {
@@ -185,6 +202,14 @@ public class AdminAdoptionController {
             AdoptionRequest request = adoptionRequestRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Request not found"));
 
+            // Get user and pet details for email
+            User user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Pet pet = petRepository.findById(request.getPetId())
+                    .orElseThrow(() -> new RuntimeException("Pet not found"));
+
+            // Update status
             request.setStatus(AdoptionRequest.Status.APPROVED);
             request.setUpdatedAt(LocalDateTime.now());
             adoptionRequestRepository.save(request);
@@ -192,11 +217,15 @@ public class AdminAdoptionController {
             String sql = "UPDATE pet SET status = 'adopted' WHERE id = ?";
             jdbcTemplate.update(sql, request.getPetId());
 
-            System.out.println("✅ Request approved");
+            // ✅ Send email to user
+            sendAdoptionApprovalEmail(user, pet);
 
-            return ResponseEntity.ok(Map.of("message", "Approved successfully"));
+            System.out.println("✅ Request approved and email sent");
+
+            return ResponseEntity.ok(Map.of("message", "Approved successfully. Email sent to user."));
 
         } catch (Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -223,6 +252,57 @@ public class AdminAdoptionController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ Email notification for adoption approval
+    private void sendAdoptionApprovalEmail(User user, Pet pet) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+
+            message.setFrom("phalphaleutkarsh@gmail.com");
+            message.setTo(user.getEmail());
+            message.setSubject("🎉 Your Pet Adoption Request Approved!");
+
+            String emailBody = String.format("""
+                    Dear %s,
+
+                    Congratulations! Your adoption request for %s has been APPROVED! 🎉
+
+                    Pet Details:
+                    - Name: %s
+                    - Breed: %s
+                    - Age: %d years
+                    - Category: %s
+
+                    Next Steps:
+                    1. Visit our center to complete the adoption paperwork
+                    2. Bring a valid ID and proof of address
+                    3. Pay the adoption fee (if applicable)
+                    4. Take your new family member home!
+
+                    Contact us at: phalphaleutkarsh@gmail.com
+
+                    Thank you for choosing to adopt!
+
+                    Best regards,
+                    Pet Adoption Team
+                    """,
+                    user.getName(),
+                    pet.getName(),
+                    pet.getName(),
+                    pet.getBreed(),
+                    pet.getAge(),
+                    pet.getCategory());
+
+            message.setText(emailBody);
+            mailSender.send(message);
+
+            System.out.println("📧 Adoption approval email sent to: " + user.getEmail());
+
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send email: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
